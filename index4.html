@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Karanlık Labirent - Sinematik</title>
+    <style>
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background: #000; overflow: hidden; font-family: 'Georgia', serif;
+        }
+
+        #overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 100; display: flex; 
+            justify-content: center; align-items: center;
+            cursor: pointer; color: #600; transition: 2s;
+        }
+        #overlay h1 { font-size: 2.5rem; text-shadow: 0 0 20px #400; letter-spacing: 8px; font-weight: 300; }
+
+        canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
+
+        #clock {
+            position: absolute; top: 30px; right: 40px; font-size: 3rem;
+            color: rgba(120, 0, 0, 0.5); z-index: 10; font-weight: bold;
+            text-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
+            font-family: 'Courier New', monospace;
+        }
+
+        #truth-container {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70%; text-align: center; z-index: 50;
+            pointer-events: none;
+        }
+
+        #reality-text {
+            color: #e0e0e0;
+            font-size: 2.4rem; /* İdeal boyut */
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255,255,255,0.8), 0 0 20px rgba(255,255,255,0.3);
+            opacity: 0;
+            transition: opacity 2s ease-in-out, transform 2s ease-in-out;
+            transform: translateY(10px);
+            line-height: 1.4;
+        }
+
+        .show-text { opacity: 1 !important; transform: translateY(0) !important; }
+
+        #spider {
+            position: absolute; width: 100px; height: 80px;
+            background: radial-gradient(circle, #1a1a1a, #000); 
+            border-radius: 50%; z-index: 20;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 1);
+            pointer-events: none;
+        }
+        
+        /* Örümcek Gözleri */
+        #spider::before, #spider::after {
+            content: ''; position: absolute; top: 15px; width: 6px; height: 8px;
+            background: #f00; border-radius: 50%; box-shadow: 0 0 10px #f00;
+        }
+        #spider::before { left: 35px; }
+        #spider::after { left: 55px; }
+    </style>
+</head>
+<body>
+
+<div id="overlay" onclick="start()">
+    <h1>SESSİZLİĞİ DİNLE</h1>
+</div>
+
+<div id="clock">00:00:00</div>
+
+<div id="truth-container">
+    <div id="reality-text"></div>
+</div>
+
+<canvas id="stormCanvas"></canvas>
+<div id="spider"></div>
+
+<audio id="bgMusic" loop>
+    <source src="yandim.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+    const canvas = document.getElementById('stormCanvas');
+    const ctx = canvas.getContext('2d');
+    const webCanvas = document.createElement('canvas'); // Ağlar için gizli katman
+    const webCtx = webCanvas.getContext('2d');
+    
+    const textEl = document.getElementById('reality-text');
+    let width, height;
+    
+    const truths = [
+        "Güvendiğin herkes bir gün yabancı olacak.",
+        "Ölüm, hayatın tek dürüst cevabıdır.",
+        "Zaman, sevdiklerini senden çalan bir hırsızdır.",
+        "Karanlık, gerçekte kim olduğunu gösteren aynadır.",
+        "Dünya, milyarlarca yalnız insanın paylaştığı bir hücredir.",
+        "Sessizlik, en gürültülü çığlıktan daha ağırdır.",
+        "Güneş sadece gölgeleri derinleştirmek için doğar.",
+        "Vicdan, kaçamayacağın tek mahkemedir.",
+        "Her veda, içinde bir parça ölüm taşır.",
+        "İnsan, kendi hayallerinin celladıdır.",
+        "Hatıralar, zihnin kurduğu en acımasız hapishanedir.",
+        "Unutulmak, ölmekten daha soğuktur.",
+        "Yarın, umutların mezarlığıdır.",
+        "Kendinden kaçtığın sürece, her yer gurbettir."
+    ];
+
+    function resize() {
+        width = canvas.width = webCanvas.width = window.innerWidth;
+        height = canvas.height = webCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function start() {
+        document.getElementById('overlay').style.opacity = '0';
+        setTimeout(() => document.getElementById('overlay').remove(), 2000);
+        document.getElementById('bgMusic').play();
+        cycleTruths();
+        animate();
+    }
+
+    let drops = [];
+    for(let i=0; i<150; i++) {
+        drops.push({x: Math.random()*width, y: Math.random()*height, s: Math.random()*8+8});
+    }
+
+    let flashAlpha = 0;
+    function animate() {
+        // Yumuşatılmış Şimşek
+        if (Math.random() > 0.993) {
+            flashAlpha = 0.4; // Daha az parlak, göz yormaz
+        }
+        
+        ctx.fillStyle = `rgba(0, 0, 0, 0.3)`;
+        ctx.fillRect(0, 0, width, height);
+        
+        if (flashAlpha > 0) {
+            ctx.fillStyle = `rgba(100, 100, 150, ${flashAlpha})`; // Mavi/Gri tonlu şimşek
+            ctx.fillRect(0, 0, width, height);
+            flashAlpha *= 0.9; 
+        }
+
+        // Örümcek Ağlarını Çiz (Zamanla biriken izler)
+        ctx.globalAlpha = 0.2;
+        ctx.drawImage(webCanvas, 0, 0);
+        ctx.globalAlpha = 1.0;
+
+        // Yağmur
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        drops.forEach(d => {
+            ctx.moveTo(d.x, d.y);
+            ctx.lineTo(d.x, d.y + d.s);
+            d.y += d.s;
+            if(d.y > height) d.y = -20;
+        });
+        ctx.stroke();
+
+        updateSpider();
+        updateClock();
+        requestAnimationFrame(animate);
+    }
+
+    const spider = document.getElementById('spider');
+    let sx = width/2, sy = height/2, tx = sx, ty = sy;
+    let lastX = sx, lastY = sy;
+
+    function updateSpider() {
+        if(Math.random() > 0.985) {
+            tx = Math.random() * (width - 150);
+            ty = Math.random() * (height - 150);
+        }
+        sx += (tx - sx) * 0.015;
+        sy += (ty - sy) * 0.015;
+        spider.style.left = sx + 'px';
+        spider.style.top = sy + 'px';
+
+        // Ağ bırakma efekti
+        webCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        webCtx.lineWidth = 0.5;
+        webCtx.beginPath();
+        webCtx.moveTo(lastX + 50, lastY + 40);
+        webCtx.lineTo(sx + 50, sy + 40);
+        webCtx.stroke();
+        lastX = sx; lastY = sy;
+    }
+
+    let tIdx = 0;
+    function cycleTruths() {
+        textEl.innerText = truths[tIdx];
+        textEl.classList.add('show-text');
+        
+        setTimeout(() => {
+            textEl.classList.remove('show-text');
+            setTimeout(() => {
+                tIdx = (tIdx + 1) % truths.length;
+                cycleTruths();
+            }, 2000);
+        }, 6000);
+    }
+
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('clock').innerText = now.getHours().toString().padStart(2, '0') + ":" + 
+            now.getMinutes().toString().padStart(2, '0') + ":" + 
+            now.getSeconds().toString().padStart(2, '0');
+    }
+</script>
+</body>
+</html>
